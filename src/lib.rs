@@ -6,14 +6,7 @@ use http::{
 };
 use spin_sdk::http::{Fields, IncomingRequest, OutgoingResponse, ResponseOutparam};
 use std::{
-    cmp::Ordering,
-    fmt,
-    fmt::Error,
-    fs::File,
-    io::{Cursor, Read},
-    path::PathBuf,
-    str,
-    str::FromStr,
+    cmp::Ordering, fmt::{self, Error}, fs::File, io::{Cursor, Read}, path::PathBuf, str::{self, FromStr}
 };
 
 /// The default value for the cache control header.
@@ -52,6 +45,11 @@ const FALLBACK_FAVICON_ICO: &[u8] = include_bytes!("../spin-favicon.ico");
 
 const BUFFER_SIZE: usize = 64 * 1024;
 const DEFLATE_LEVEL: flate2::Compression = flate2::Compression::fast();
+
+const CUSTOM_HEADERS: &[(&str,&str)] = &[
+    ("Cross-Origin-Embedder-Policy", "require-corp"),
+    ("Cross-Origin-Opener-Policy", "same-origin"),
+];
 
 #[derive(PartialEq, Debug)]
 struct ContentEncoding {
@@ -239,6 +237,12 @@ async fn handle_request(req: IncomingRequest, res_out: ResponseOutparam) {
             for (name, value) in headers {
                 let _ = fields.append(&name, &value);
             }
+            
+            // add custom headers (global)
+            for (name, value) in CUSTOM_HEADERS {
+                let _ = fields.append(&name.to_string(), &value.to_string().into_bytes());
+            }
+
             let res = OutgoingResponse::new(fields);
             let _ = res.set_status_code(status.as_u16());
             let mut body = res.take_body();
